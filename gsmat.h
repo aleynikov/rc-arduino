@@ -12,6 +12,7 @@ class GSMAT
         String get_content(); 
     private:
         SoftwareSerial _gsm;
+        byte _ps;
         void _parse_response(byte b);
         void _reset_buffer();
         void _reset_content();

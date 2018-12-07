@@ -5,7 +5,7 @@
 #define PIN_RX 7
 #define PIN_TX 8
 
-enum _ps {
+enum ps {
   PS_DETECT_MSG_TYPE,
 
   PS_IGNORING_COMMAND_ECHO,
@@ -20,7 +20,6 @@ enum _ps {
   PS_SAPBR,
   PS_CME_ERROR
 };
-byte ps = PS_DETECT_MSG_TYPE;
 
 char content[255];
 int content_pos = 0;
@@ -32,6 +31,7 @@ int buffer_pos = 0;
 GSMAT::GSMAT(int baund): _gsm(PIN_RX, PIN_TX)
 {
     _gsm.begin(baund);
+    _ps = PS_DETECT_MSG_TYPE;
 }
 
 void GSMAT::_parse_response(byte b)
@@ -48,17 +48,17 @@ void GSMAT::_parse_response(byte b)
                 _reset_buffer();
             else {
                 if (buffer_pos == 3 && strcmp(buffer, "AT+") == 0) {
-                    ps = PS_IGNORING_COMMAND_ECHO;
+                    _ps = PS_IGNORING_COMMAND_ECHO;
                 }
                 else if (b == ':') {
                     if (strcmp(buffer, "+HTTPACTION:") == 0) {
-                        ps = PS_HTTPACTION_TYPE;
+                        _ps = PS_HTTPACTION_TYPE;
                     }
                     else if (strcmp(buffer, "+HTTPREAD:") == 0) {
-                        ps = PS_HTTPREAD_LENGTH;
+                        _ps = PS_HTTPREAD_LENGTH;
                     }
                     else if (strcmp(buffer, "+CME ERROR:") == 0) {
-                        ps = PS_CME_ERROR;
+                        _ps = PS_CME_ERROR;
                     }
 
                     _reset_buffer();
@@ -70,7 +70,7 @@ void GSMAT::_parse_response(byte b)
         case PS_IGNORING_COMMAND_ECHO:
         {
             if (b == '\n') {
-                ps = PS_DETECT_MSG_TYPE;
+                _ps = PS_DETECT_MSG_TYPE;
                 _reset_buffer();
             }
         }
@@ -79,7 +79,7 @@ void GSMAT::_parse_response(byte b)
         case PS_HTTPACTION_TYPE:
         {
             if (b == ',') {
-                ps = PS_HTTPACTION_RESULT;
+                _ps = PS_HTTPACTION_RESULT;
                 _reset_buffer();
             }
         }
@@ -88,7 +88,7 @@ void GSMAT::_parse_response(byte b)
         case PS_HTTPACTION_RESULT:
         {
             if (b == ',') {
-                ps = PS_HTTPACTION_LENGTH;
+                _ps = PS_HTTPACTION_LENGTH;
                 _reset_buffer();
             }
         }
@@ -100,7 +100,7 @@ void GSMAT::_parse_response(byte b)
                 _gsm.print("AT+HTTPREAD=0,");
                 _gsm.println(buffer);
 
-                ps = PS_DETECT_MSG_TYPE;
+                _ps = PS_DETECT_MSG_TYPE;
                 _reset_buffer();
             }
         }
@@ -111,7 +111,7 @@ void GSMAT::_parse_response(byte b)
             if (b == '\n') {
                 content_length = atoi(buffer);
 
-                ps = PS_HTTPREAD_CONTENT;
+                _ps = PS_HTTPREAD_CONTENT;
                 _reset_buffer();
             }
         }
@@ -123,7 +123,7 @@ void GSMAT::_parse_response(byte b)
             content_length--;
 
             if (content_length <= 0) {
-                ps = PS_DETECT_MSG_TYPE;
+                _ps = PS_DETECT_MSG_TYPE;
                 _reset_buffer();
             }
         }
@@ -132,7 +132,7 @@ void GSMAT::_parse_response(byte b)
         case PS_SAPBR:
         {
             if (b == '\n') {
-                ps = PS_DETECT_MSG_TYPE;
+                _ps = PS_DETECT_MSG_TYPE;
                 _reset_buffer();
             }
         }
@@ -141,7 +141,7 @@ void GSMAT::_parse_response(byte b)
         case PS_CME_ERROR:
         {
             if (b == '\n') {
-                ps = PS_DETECT_MSG_TYPE;
+                _ps = PS_DETECT_MSG_TYPE;
                 _reset_buffer();
             }
         }
